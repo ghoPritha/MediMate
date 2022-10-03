@@ -3,12 +3,18 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from firebase_admin import db
 from flask import Flask, request, jsonify, make_response, render_template, json
+import smtplib
+import imghdr
+from email.message import EmailMessage
 
 cred = credentials.Certificate("serviceAccountKey.json")
 
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
+
+EMAIL_ADDRESS = "medimatedoctor@gmail.com"
+EMAIL_PASSWORD = "medimate001"
 
 session: any = ''
 query: any = ''
@@ -499,6 +505,8 @@ def provideEmergencyDetails(req):
 def providePharmacyDetails(req):
     pass
 
+
+##simply pushing
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
