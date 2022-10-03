@@ -21,6 +21,8 @@ specialization = []
 docID = []
 checkListDocID = []
 
+intentList = []
+intentQueryList = []
 
 
 @app.route('/')
@@ -60,11 +62,18 @@ def processRequest(req):
     print(userID)
     query_response = req.get("queryResult")
     intent = query_response.get("intent").get("displayName")
+    intentList.append(intent)
     # print(query_response)
+    print(intent)
+    print("------")
+    print(intentList)
+
     res = ''
     query = query_response.get('queryText')
     result = query_response.get("fulfillmentText")
     session = query_response.get("outputContexts")[0].get("name").split("/")[-3]
+    print(query)
+    print(result)
 
     if intent == 'MedimateWelcomeIntent':
         # print("HIiii")
@@ -73,7 +82,7 @@ def processRequest(req):
 
     elif intent == 'finddoctors':
         # print("HIiii")
-        getDoctors, specout , docNo = getListofDoctors(req)
+        getDoctors, specout, docNo = getListofDoctors(req)
         specialization.append(specout)
         checkListDocID.append(docNo)
         saveConversations(query, req['queryResult']['parameters'].get('doctorspecialization'), session, userID[-1],
@@ -83,9 +92,9 @@ def processRequest(req):
 
     elif intent == 'doctorInfo':
         docID.append(query)
-        doctorInfo, name = provideDoctorDetails(query, specialization,checkListDocID)
+        doctorInfo, name = provideDoctorDetails(query, specialization, checkListDocID)
 
-        if (name == "INVALID"):
+        if name == "INVALID":
             quickReplies = [
                 "Go back to Find Doctor",
                 "Exit"
@@ -97,24 +106,17 @@ def processRequest(req):
                 "Exit"
             ]
 
-        res = createResponseForAdditionalInfo(doctorInfo,quickReplies)
+        res = createResponseForAdditionalInfo(doctorInfo, quickReplies)
 
-
-
-
-        #res = createFollowUpResponse(doctorInfo,"additionalinfo")
+        # res = createFollowUpResponse(doctorInfo,"additionalinfo")
         saveConversations(query, name, session, userID[-1], intent)
 
         print(res)
         # return res
 
     elif intent == 'New User - yes':
-        res = newUserDetails(req, session)
         saveConversations(query, result, session, userID[-1], intent)
-        # saveConversations(query, result, session, userID[-1])
-        print("i am coming till here :p")
-        # res = createCommonResponse(newUser)
-        print(res)
+        res = newUserDetails(req, session)
         # return res
 
     # elif intent == 'New User - no':
@@ -141,7 +143,7 @@ def processRequest(req):
             "Emergency Information",
             "Exit"
         ]
-        res = createCommonResponse(pharmacyDetail,quickReplies)
+        res = createCommonResponse(pharmacyDetail, quickReplies)
         saveConversations(query, result, session, userID[-1], intent)
         print(res)
         # return res
@@ -153,7 +155,7 @@ def processRequest(req):
             "Pharmacy Emergency",
             "Exit"
         ]
-        res = createCommonResponse(emergencyDetail,quickReplies)
+        res = createCommonResponse(emergencyDetail, quickReplies)
         saveConversations(query, result, session, userID[-1], intent)
         print(res)
 
@@ -167,11 +169,16 @@ def processRequest(req):
         res = createResponseForOpHoursInfo(operationalDetails)
         print(res)
 
-
+    elif intent == 'fallback':
+        res = intentQueryList[-2]
 
     elif intent == 'exitConversation':
         res = createFollowUpResponse("Exit", "Welcome")
 
+    print("last res")
+    print(res)
+    intentQueryList.append(res)
+    print(intentQueryList)
 
     return res
 
@@ -228,6 +235,7 @@ def createCommonResponse(fulfilment_text, quickReplies):
                 "platform": "TELEGRAM"
             }]
     }
+
     return fulfillmentMessages
 
 
@@ -289,7 +297,8 @@ def createFollowUpResponse(fulfilment_text, Event):
     #     ]
     # }
 
-def createResponseForAdditionalInfo(fulfilment_text,quickReplies):
+
+def createResponseForAdditionalInfo(fulfilment_text, quickReplies):
     fulfillmentMessages = {
         "fulfillmentMessages": [{
             "text": {
@@ -308,6 +317,7 @@ def createResponseForAdditionalInfo(fulfilment_text,quickReplies):
             }]
     }
     return fulfillmentMessages
+
 
 def createResponseForNavigationalInfo(fulfilment_text):
     fulfillmentMessages = {
@@ -332,6 +342,7 @@ def createResponseForNavigationalInfo(fulfilment_text):
     }
     return fulfillmentMessages
 
+
 def createResponseForOpHoursInfo(fulfilment_text):
     fulfillmentMessages = {
         "fulfillmentMessages": [{
@@ -354,6 +365,7 @@ def createResponseForOpHoursInfo(fulfilment_text):
             }]
     }
     return fulfillmentMessages
+
 
 def newUserDetails(req, session):
     userName = req['queryResult']['parameters']['user_name']
@@ -510,7 +522,7 @@ def checkUserExistence(userId):
 def getListofDoctors(req):
     result = ["Here is the list of doctors to choose from: "]
     i = 1
-    doctorID =[]
+    doctorID = []
 
     parameters = req['queryResult']['parameters']
     # print('Dialogflow parameters:')
@@ -566,17 +578,16 @@ def getListofDoctors(req):
                 i = i + 1
                 result.append(docName)
         print(result)
-        if len(result)==1:
+        if len(result) == 1:
             res = "Unfortunately, there are no doctors with your requirement. Please try again with a different language of communication. "
         else:
             res = "\r\n".join(x for x in result) + "\n" + 'Please enter the ID of a doctor for more info:)'
         print(res)
 
-        return res, specialization,doctorID
+        return res, specialization, doctorID
 
 
-def provideDoctorDetails(options, specialization,checkListofDocs):
-
+def provideDoctorDetails(options, specialization, checkListofDocs):
     options = options.upper()
     if options in checkListofDocs[0]:
         if specialization[-1] != "general physician":
@@ -618,25 +629,23 @@ def processLanguage(specialization, language):
 
 
 def provideEmergencyDetails(req):
-    emergencyDetails = "Here is a list of Emergency numbers : "+"\n"
+    emergencyDetails = "Here is a list of Emergency numbers : " + "\n"
     emergency = db.collection(u'Emergency').get()
     print(emergency)
     i = 1
     for emergencyInfo in emergency:
-        name =  "🩺 Name : " + "0"+str(i)+ " : "+ u'{}'.format(emergencyInfo.to_dict()['Name'])
-        address = "📌 Address "+ "0"+str(i)+ " : " + u'{}'.format(emergencyInfo.to_dict()['Address'])
-        phone = "📞 Phone " +"0"+ str(i)+ " : " + u'{}'.format(emergencyInfo.to_dict()['Telephone'])
-        emergencyDetails += name+"\n"+ address + "\n" + phone +"\n"
-        i=i+1
+        name = "🩺 Name : " + "0" + str(i) + " : " + u'{}'.format(emergencyInfo.to_dict()['Name'])
+        address = "📌 Address " + "0" + str(i) + " : " + u'{}'.format(emergencyInfo.to_dict()['Address'])
+        phone = "📞 Phone " + "0" + str(i) + " : " + u'{}'.format(emergencyInfo.to_dict()['Telephone'])
+        emergencyDetails += name + "\n" + address + "\n" + phone + "\n"
+        i = i + 1
 
     print(emergencyDetails)
     return emergencyDetails
 
 
-
-
 def providePharmacyDetails(req):
-    pharmacyDetails = "Here is a list of Pharmacy Emergency numbers : "+"\n"
+    pharmacyDetails = "Here is a list of Pharmacy Emergency numbers : " + "\n"
     pharmacy = db.collection(u'Pharmacy').get()
     i = 1
     for pharmacyInfo in pharmacy:
@@ -647,9 +656,10 @@ def providePharmacyDetails(req):
     print(pharmacyDetails)
     return pharmacyDetails
 
-def provideNavigationRoutes(docID,specialization):
+
+def provideNavigationRoutes(docID, specialization):
     doctorID = docID[-1].upper()
-    route =""
+    route = ""
 
     if (specialization[-1] != "general physician"):
         Specialization = specialization[-1].capitalize()
@@ -660,25 +670,24 @@ def provideNavigationRoutes(docID,specialization):
     detailedInfo = db.collection(Specialization).document(doctorID)
     info = detailedInfo.get()
     if info.exists:
-        navigation =  u'{}'.format(info.to_dict()['Navigation'])
-        navigation = navigation.replace("[","")
+        navigation = u'{}'.format(info.to_dict()['Navigation'])
+        navigation = navigation.replace("[", "")
         navigation = navigation.replace("]", "")
         delim = navigation.split(",")
-        i=1
+        i = 1
         for routes in delim:
             route += str(i) + "." + routes + "\n"
             i += 1
     else:
         route = 'Unfortunately, the routes are not available for this Doctor ID. '
 
-
-
     print(route)
     return route
 
-def provideOperationalHours(docID,specialization):
+
+def provideOperationalHours(docID, specialization):
     doctorID = docID[-1].upper()
-    hours=""
+    hours = ""
     if (specialization[-1] != "general physician"):
         Specialization = specialization[-1].capitalize()
 
@@ -703,6 +712,5 @@ def provideOperationalHours(docID,specialization):
     return hours
 
 
-
 if __name__ == "__main__":
-    app.run(debug=True, port=5002)
+    app.run(debug=True, port=5000)
