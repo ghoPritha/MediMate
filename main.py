@@ -18,9 +18,6 @@ userID = ['test']
 app = Flask(__name__)
 
 specialization = []
-docID = []
-checkListDocID = []
-
 
 
 @app.route('/')
@@ -73,36 +70,16 @@ def processRequest(req):
 
     elif intent == 'finddoctors':
         # print("HIiii")
-        getDoctors, specout , docNo = getListofDoctors(req)
+        getDoctors, specout = getListofDoctors(req)
         specialization.append(specout)
-        checkListDocID.append(docNo)
         saveConversations(query, req['queryResult']['parameters'].get('doctorspecialization'), session, userID[-1],
                           intent)
         res = createResponse(getDoctors)
         # return res
 
     elif intent == 'doctorInfo':
-        docID.append(query)
-        doctorInfo, name = provideDoctorDetails(query, specialization,checkListDocID)
-
-        if (name == "INVALID"):
-            quickReplies = [
-                "Go back to Find Doctor",
-                "Exit"
-            ]
-        else:
-            quickReplies = [
-                "Operational Hours",
-                "Navigational Hours",
-                "Exit"
-            ]
-
-        res = createResponseForAdditionalInfo(doctorInfo,quickReplies)
-
-
-
-
-        #res = createFollowUpResponse(doctorInfo,"additionalinfo")
+        doctorInfo, name = provideDoctorDetails(query, specialization)
+        res = createResponse(doctorInfo)
         saveConversations(query, name, session, userID[-1], intent)
 
         print(res)
@@ -113,7 +90,7 @@ def processRequest(req):
         saveConversations(query, result, session, userID[-1], intent)
         # saveConversations(query, result, session, userID[-1])
         print("i am coming till here :p")
-        # res = createCommonResponse(newUser)
+        # res = createResponseForNewUser(newUser)
         print(res)
         # return res
 
@@ -131,47 +108,29 @@ def processRequest(req):
         # print('in here')
         res = existingUserDetail(req)
         # saveConversations(query, result, session, userID[-1], intent)
-        # res = createCommonResponse(existingUser)
+        # res = createResponseForNewUser(existingUser)
         # return res
 
-    elif intent == 'pharmacyEmergency':
+    elif intent == 'pharmacy':
         pharmacyDetail = providePharmacyDetails(req)
-        quickReplies = [
-            "Find Doctor",
-            "Emergency Information",
-            "Exit"
-        ]
-        res = createCommonResponse(pharmacyDetail,quickReplies)
+        res = createResponse(pharmacyDetail)
         saveConversations(query, result, session, userID[-1], intent)
         print(res)
         # return res
 
-    elif intent == 'emergencyInfo':
+    elif intent == 'emergency':
         emergencyDetail = provideEmergencyDetails(req)
-        quickReplies = [
-            "Find Doctor",
-            "Pharmacy Emergency",
-            "Exit"
-        ]
-        res = createCommonResponse(emergencyDetail,quickReplies)
+        res = createResponse(emergencyDetail)
         saveConversations(query, result, session, userID[-1], intent)
         print(res)
-
-    elif intent == 'navigationalRoutes':
-        navigationDetails = provideNavigationRoutes(docID, specialization)
-        res = createResponseForNavigationalInfo(navigationDetails)
-        print(res)
-
-    elif intent == 'operationalHours':
-        operationalDetails = provideOperationalHours(docID, specialization)
-        res = createResponseForOpHoursInfo(operationalDetails)
-        print(res)
-
-
 
     elif intent == 'exitConversation':
         res = createFollowUpResponse("Exit", "Welcome")
 
+    # elif intent == 'languagespecification':
+    #     doctorName = filterLanguageSpoken(text, specialization)
+    #     res = get_data(doctorName)
+    #     return res
 
     return res
 
@@ -210,7 +169,7 @@ def createResponse(fulfilment_text):
     #
 
 
-def createCommonResponse(fulfilment_text, quickReplies):
+def createResponseForNewUser(fulfilment_text):
     fulfillmentMessages = {
         "fulfillmentMessages": [{
             "text": {
@@ -223,7 +182,11 @@ def createCommonResponse(fulfilment_text, quickReplies):
             {
                 "quickReplies": {
                     "title": "Please choose any option 👇",
-                    "quickReplies": quickReplies
+                    "quickReplies": [
+                        "Find Doctor",
+                        "Emergency Room Contact",
+                        "Pharmacy Contact"
+                    ]
                 },
                 "platform": "TELEGRAM"
             }]
@@ -231,28 +194,28 @@ def createCommonResponse(fulfilment_text, quickReplies):
     return fulfillmentMessages
 
 
-# def createResponseForOldUser(fulfilment_text):
-#     fulfillmentMessages = {
-#         "fulfillmentMessages": [{
-#             "text": {
-#                 "text": [
-#                     fulfilment_text
-#                 ]
-#             },
-#             "platform": "TELEGRAM"
-#         },
-#             {
-#                 "quickReplies": {
-#                     "title": "Please choose any option 👇",
-#                     "quickReplies": [
-#                         "Notes",
-#                         "Go to services menu"
-#                     ]
-#                 },
-#                 "platform": "TELEGRAM"
-#             }]
-#     }
-#     return fulfillmentMessages
+def createResponseForOldUser(fulfilment_text):
+    fulfillmentMessages = {
+        "fulfillmentMessages": [{
+            "text": {
+                "text": [
+                    fulfilment_text
+                ]
+            },
+            "platform": "TELEGRAM"
+        },
+            {
+                "quickReplies": {
+                    "title": "Please choose any option 👇",
+                    "quickReplies": [
+                        "Notes",
+                        "Go to services menu"
+                    ]
+                },
+                "platform": "TELEGRAM"
+            }]
+    }
+    return fulfillmentMessages
 
 
 def createFollowUpResponse(fulfilment_text, Event):
@@ -289,71 +252,6 @@ def createFollowUpResponse(fulfilment_text, Event):
     #     ]
     # }
 
-def createResponseForAdditionalInfo(fulfilment_text,quickReplies):
-    fulfillmentMessages = {
-        "fulfillmentMessages": [{
-            "text": {
-                "text": [
-                    fulfilment_text
-                ]
-            },
-            "platform": "TELEGRAM"
-        },
-            {
-                "quickReplies": {
-                    "title": "If you need any additional information, please choose one of the options 👇",
-                    "quickReplies": quickReplies
-                },
-                "platform": "TELEGRAM"
-            }]
-    }
-    return fulfillmentMessages
-
-def createResponseForNavigationalInfo(fulfilment_text):
-    fulfillmentMessages = {
-        "fulfillmentMessages": [{
-            "text": {
-                "text": [
-                    fulfilment_text
-                ]
-            },
-            "platform": "TELEGRAM"
-        },
-            {
-                "quickReplies": {
-                    "title": "If you need any additional information, please choose one of the options 👇",
-                    "quickReplies": [
-                        "Operational Hours",
-                        "Exit"
-                    ]
-                },
-                "platform": "TELEGRAM"
-            }]
-    }
-    return fulfillmentMessages
-
-def createResponseForOpHoursInfo(fulfilment_text):
-    fulfillmentMessages = {
-        "fulfillmentMessages": [{
-            "text": {
-                "text": [
-                    fulfilment_text
-                ]
-            },
-            "platform": "TELEGRAM"
-        },
-            {
-                "quickReplies": {
-                    "title": "If you need any additional information, please choose one of the options 👇",
-                    "quickReplies": [
-                        "Navigational Routes",
-                        "Exit"
-                    ]
-                },
-                "platform": "TELEGRAM"
-            }]
-    }
-    return fulfillmentMessages
 
 def newUserDetails(req, session):
     userName = req['queryResult']['parameters']['user_name']
@@ -367,12 +265,7 @@ def newUserDetails(req, session):
     if checkUserExistenceByEmail(userEmail):
         userId = saveUserDetail(session, userEmail, userName, zipCode)
         message = "Hello, " + userName + " welcome to MediMate. Your userID is : " + userId
-        quickReplies = [
-            "Find Doctor",
-            "Emergency Room Contact",
-            "Pharmacy Contact"
-        ]
-        res = createCommonResponse(message, quickReplies)
+        res = createResponseForNewUser(message)
     else:
         message = 'Looks like this email id is already registered with us, please try a different email Id'
         res = createResponse(message)
@@ -435,11 +328,7 @@ def existingUserDetail(req):
         message, doesConvoExist = fetchPreviousConversation(userId)
         response = "Welcome back " + str(userName) + '. ' + message
         if doesConvoExist:
-            quickReplies = [
-                "Notes",
-                "Go to services menu"
-            ]
-            res = createCommonResponse(response, quickReplies)
+            res = createResponseForOldUser(response)
         else:
             res = createResponse(response)
     return res
@@ -510,7 +399,6 @@ def checkUserExistence(userId):
 def getListofDoctors(req):
     result = ["Here is the list of doctors to choose from: "]
     i = 1
-    doctorID =[]
 
     parameters = req['queryResult']['parameters']
     # print('Dialogflow parameters:')
@@ -524,7 +412,6 @@ def getListofDoctors(req):
             GeneralPhysicians = processLanguage(specialization1, language)
             for doctors in GeneralPhysicians:
                 docID = u'{}'.format(doctors.to_dict()['DocID'])
-                doctorID.append(str(docID))
                 # str(i) +
                 docName = '👉' + u'{}'.format(doctors.to_dict()['Name']) + "\n" + "Doctor ID: " + docID + "\n"
                 i = i + 1
@@ -533,7 +420,6 @@ def getListofDoctors(req):
             Gynaecologist = processLanguage(specialization, language)
             for doctors in Gynaecologist:
                 docID = u'{}'.format(doctors.to_dict()['DocID'])
-                doctorID.append(str(docID))
                 # str(i) +
                 docName = '👉' + u'{}'.format(doctors.to_dict()['Name']) + "\n" + "Doctor ID: " + docID + "\n"
                 i = i + 1
@@ -542,7 +428,6 @@ def getListofDoctors(req):
             Ophthalmologist = processLanguage(specialization, language)
             for doctors in Ophthalmologist:
                 docID = u'{}'.format(doctors.to_dict()['DocID'])
-                doctorID.append(str(docID))
                 # str(i) +
                 docName = '👉' + u'{}'.format(doctors.to_dict()['Name']) + "\n" + "Doctor ID: " + docID + "\n"
                 i = i + 1
@@ -551,7 +436,6 @@ def getListofDoctors(req):
             Cardiologist = processLanguage(specialization, language)
             for doctors in Cardiologist:
                 docID = u'{}'.format(doctors.to_dict()['DocID'])
-                doctorID.append(str(docID))
                 # str(i) +
                 docName = '👉' + u'{}'.format(doctors.to_dict()['Name']) + "\n" + "Doctor ID: " + docID + "\n"
                 i = i + 1
@@ -560,49 +444,40 @@ def getListofDoctors(req):
             pain = processLanguage(specialization, language)
             for doctors in pain:
                 docID = u'{}'.format(doctors.to_dict()['DocID'])
-                doctorID.append(str(docID))
                 # str(i) +
                 docName = '👉' + u'{}'.format(doctors.to_dict()['Name']) + "\n" + "Doctor ID: " + docID + "\n"
                 i = i + 1
                 result.append(docName)
         print(result)
-        if len(result)==1:
-            res = "Unfortunately, there are no doctors with your requirement. Please try again with a different language of communication. "
-        else:
-            res = "\r\n".join(x for x in result) + "\n" + 'Please enter the ID of a doctor for more info:)'
+        res = "\r\n".join(x for x in result) + "\n" + 'Please enter the ID of a doctor for more info:)'
         print(res)
 
-        return res, specialization,doctorID
+        return res, specialization
 
 
-def provideDoctorDetails(options, specialization,checkListofDocs):
-
+def provideDoctorDetails(options, specialization):
     options = options.upper()
-    if options in checkListofDocs[0]:
-        if specialization[-1] != "general physician":
-            Specialization = specialization[-1].capitalize()
-
-        else:
-            Specialization = "GeneralPhysician"
-
-        detailedInfo = db.collection(Specialization).document(options)
-        info = detailedInfo.get()
-        print(info)
-
-        res = ""
-        if info.exists:
-            name = "🩺 Name : " + u'{}'.format(info.to_dict()['Name'])
-            address = "📌 Address : " + u'{}'.format(info.to_dict()['Address'])
-            phone = "📞 Phone : " + u'{}'.format(info.to_dict()['Telephone'])
-            res = name + "\n" + address + "\n" + phone
-        else:
-            res = 'Please make sure to enter the correct Doctor ID'
-
-        print(res)
+    print(options)
+    if specialization[-1] != "general physician":
+        Specialization = specialization[-1].capitalize()
 
     else:
-        res = "The Doctor ID may be valid but does not meet your language requirements."
-        name = "INVALID"
+        Specialization = "GeneralPhysician"
+
+    detailedInfo = db.collection(Specialization).document(options)
+    info = detailedInfo.get()
+    print(info)
+
+    res = ""
+    if info.exists:
+        name = "🩺 Name : " + u'{}'.format(info.to_dict()['Name'])
+        address = "📌 Address : " + u'{}'.format(info.to_dict()['Address'])
+        phone = "📞 Phone : " + u'{}'.format(info.to_dict()['Telephone'])
+        res = name + "\n" + address + "\n" + phone
+    else:
+        res = 'Please make sure to enter the correct Doctor ID'
+
+    print(res)
 
     return res, name
 
@@ -618,91 +493,12 @@ def processLanguage(specialization, language):
 
 
 def provideEmergencyDetails(req):
-    emergencyDetails = "Here is a list of Emergency numbers : "+"\n"
-    emergency = db.collection(u'Emergency').get()
-    print(emergency)
-    i = 1
-    for emergencyInfo in emergency:
-        name =  "🩺 Name : " + "0"+str(i)+ " : "+ u'{}'.format(emergencyInfo.to_dict()['Name'])
-        address = "📌 Address "+ "0"+str(i)+ " : " + u'{}'.format(emergencyInfo.to_dict()['Address'])
-        phone = "📞 Phone " +"0"+ str(i)+ " : " + u'{}'.format(emergencyInfo.to_dict()['Telephone'])
-        emergencyDetails += name+"\n"+ address + "\n" + phone +"\n"
-        i=i+1
-
-    print(emergencyDetails)
-    return emergencyDetails
-
-
+    pass
 
 
 def providePharmacyDetails(req):
-    pharmacyDetails = "Here is a list of Pharmacy Emergency numbers : "+"\n"
-    pharmacy = db.collection(u'Pharmacy').get()
-    i = 1
-    for pharmacyInfo in pharmacy:
-        address = "📌 Address" + str(i) + " : " + u'{}'.format(pharmacyInfo.to_dict()['Address'])
-        phone = "📞 Phone" + str(i) + " : " + u'{}'.format(pharmacyInfo.to_dict()['Phone'])
-        pharmacyDetails += address + "\n" + phone + "\n"
-
-    print(pharmacyDetails)
-    return pharmacyDetails
-
-def provideNavigationRoutes(docID,specialization):
-    doctorID = docID[-1].upper()
-    route =""
-
-    if (specialization[-1] != "general physician"):
-        Specialization = specialization[-1].capitalize()
-
-    else:
-        Specialization = "GeneralPhysician"
-
-    detailedInfo = db.collection(Specialization).document(doctorID)
-    info = detailedInfo.get()
-    if info.exists:
-        navigation =  u'{}'.format(info.to_dict()['Navigation'])
-        navigation = navigation.replace("[","")
-        navigation = navigation.replace("]", "")
-        delim = navigation.split(",")
-        i=1
-        for routes in delim:
-            route += str(i) + "." + routes + "\n"
-            i += 1
-    else:
-        route = 'Unfortunately, the routes are not available for this Doctor ID. '
-
-
-
-    print(route)
-    return route
-
-def provideOperationalHours(docID,specialization):
-    doctorID = docID[-1].upper()
-    hours=""
-    if (specialization[-1] != "general physician"):
-        Specialization = specialization[-1].capitalize()
-
-    else:
-        Specialization = "GeneralPhysician"
-
-    detailedInfo = db.collection(Specialization).document(doctorID)
-    info = detailedInfo.get()
-    if info.exists:
-        OperationalHours = u'{}'.format(info.to_dict()['OperationalHours'])
-        OperationalHours = OperationalHours.replace("{", "")
-        OperationalHours = OperationalHours.replace("}", "")
-        delim = OperationalHours.split(",")
-        i = 1
-        for opHrs in delim:
-            hours += str(i) + "." + opHrs + "\n"
-            i += 1
-    else:
-        OperationalHours = 'Unfortunately, the working timings are not available for this Doctor ID. '
-
-    print(hours)
-    return hours
-
+    pass
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5002)
+    app.run(debug=True, port=5001)
